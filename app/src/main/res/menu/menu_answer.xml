@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="sfzd5.com.pexercises.MainActivity">
+    <item
+        android:id="@+id/shared"
+        android:orderInCategory="102"
+        android:title="@string/shared"
+        app:showAsAction="always" />
+</menu>

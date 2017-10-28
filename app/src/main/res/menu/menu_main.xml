@@ -1,0 +1,25 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="sfzd5.com.pexercises.MainActivity">
+    <item
+        android:id="@+id/show_nomal"
+        android:orderInCategory="101"
+        android:title="@string/show_nomal"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/show_shared"
+        android:orderInCategory="102"
+        android:title="@string/show_shared"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/show_hidden"
+        android:orderInCategory="103"
+        android:title="@string/show_hidden"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/show_del_hidden"
+        android:orderInCategory="104"
+        android:title="@string/show_del_hidden"
+        app:showAsAction="never" />
+</menu>

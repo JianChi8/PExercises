@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">掌上习题</string>
+    <string name="show_filter">查询</string>
+    <string name="show_shared">已分享习题</string>
+    <string name="show_hidden">隐藏习题</string>
+    <string name="show_nomal">随机100题</string>
+    <string name="title_activity_web_view">每日一题</string>
+    <string name="shared">分享</string>
+    <string name="title_activity_select_knowlage">选择知识点</string>
+    <string name="show_del_hidden">删除隐藏</string>
+    <string name="title_activity_start">掌上习题</string>
+    <string name="set_subject">设置学科</string>
+    <string name="title_activity_mryt">每日一题</string>
+    <string name="title_activity_voice_rec">讲解录音</string>
+    <string name="answer">答案</string>
+    <string name="title_activity_answer">答案</string>
+</resources>
