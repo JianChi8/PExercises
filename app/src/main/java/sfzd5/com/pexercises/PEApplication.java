@@ -71,12 +71,13 @@ public class PEApplication extends Application {
             dbInitSuccess=false;
             return;
         } else {
-
             File[] fs = dbDir.listFiles();
-            for (File f : fs) {
-                String dbFile = f.getName();
-                if (subjectMap.containsKey(dbFile)) {
-                    subjectDBs.add(subjectMap.get(dbFile));
+            if(fs!=null) {
+                for (File f : fs) {
+                    String dbFile = f.getName();
+                    if (subjectMap.containsKey(dbFile)) {
+                        subjectDBs.add(subjectMap.get(dbFile));
+                    }
                 }
             }
 
@@ -93,7 +94,7 @@ public class PEApplication extends Application {
         if(subject.equals("物理")) {
             dbDirName="wldb";
         } else if(subject.equals("数学")) {
-            dbDirName="wldb";
+            dbDirName="sxdb";
         } else if(subject.equals("化学")) {
             dbDirName="hxdb";
         }

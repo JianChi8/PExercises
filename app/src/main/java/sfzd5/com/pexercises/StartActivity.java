@@ -1,7 +1,10 @@
 package sfzd5.com.pexercises;
 
+import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -26,16 +29,32 @@ public class StartActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        app = (PEApplication) getApplication();
-
-        if(app.dbInitSuccess){
-            if(app.isSetSubject()){
-                initList();
-            } else {
-                selectSubject();
+        boolean needPermission = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                    || checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
+                needPermission = true;
             }
+        }
+
+        if(needPermission){
+            AlertDialog.Builder normalDialog = new AlertDialog.Builder(this);
+            normalDialog.setTitle("警告");
+            normalDialog.setMessage("请在应用权限管理中确认读写文件权限");
+            normalDialog.setPositiveButton("确定",null);
+            normalDialog.show();
         } else {
-            showNoDBFileDialog();
+            app = (PEApplication) getApplication();
+
+            if (app.dbInitSuccess) {
+                if (app.isSetSubject()) {
+                    initList();
+                } else {
+                    selectSubject();
+                }
+            } else {
+                showNoDBFileDialog();
+            }
         }
     }
 
@@ -58,9 +77,16 @@ public class StartActivity extends AppCompatActivity {
                     if(app.subjectDBs.contains(subject)) {
                         TextView textView = (TextView) view;
                         String dbName = textView.getText().toString();
-                        app.initDbHelper(dbName);
-                        Intent intent = new Intent(StartActivity.this, SelectKnowlageActivity.class);
-                        startActivity(intent);
+                        if(app.initDbHelper(dbName)){
+                            Intent intent = new Intent(StartActivity.this, SelectKnowlageActivity.class);
+                            startActivity(intent);
+                        } else {
+                            AlertDialog.Builder normalDialog = new AlertDialog.Builder(StartActivity.this);
+                            normalDialog.setTitle("警告");
+                            normalDialog.setMessage("未找到数据文件：" + dbName);
+                            normalDialog.setPositiveButton("确定",null);
+                            normalDialog.show();
+                        }
                     } else {
                         Toast.makeText(StartActivity.this, "未发现"+app.getSubject()+"数据库，请设置并重启APP", Toast.LENGTH_LONG);
                     }

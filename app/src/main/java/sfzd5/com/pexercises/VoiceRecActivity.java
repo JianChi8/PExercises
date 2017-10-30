@@ -1,16 +1,20 @@
 package sfzd5.com.pexercises;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -126,13 +130,28 @@ public class VoiceRecActivity extends AppCompatActivity {
         bt_rec.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(recorder.isRecordIng()){
-                    recorder.stopRecord();
-                    bt_rec.setText("录音");
+                boolean needPermission = false;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ) {
+                        needPermission = true;
+                    }
+                }
+
+                if(needPermission){
+                    AlertDialog.Builder normalDialog = new AlertDialog.Builder(VoiceRecActivity.this);
+                    normalDialog.setTitle("警告");
+                    normalDialog.setMessage("请在应用权限管理中确认录音权限");
+                    normalDialog.setPositiveButton("确定",null);
+                    normalDialog.show();
                 } else {
-                    recorder.startRecord();
-                    bt_save.setEnabled(false);
-                    bt_rec.setText("停止");
+                    if (recorder.isRecordIng()) {
+                        recorder.stopRecord();
+                        bt_rec.setText("录音");
+                    } else {
+                        recorder.startRecord();
+                        bt_save.setEnabled(false);
+                        bt_rec.setText("停止");
+                    }
                 }
             }
         });
