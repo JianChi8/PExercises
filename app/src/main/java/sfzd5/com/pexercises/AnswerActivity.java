@@ -108,10 +108,7 @@ public class AnswerActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Date date = new Date();
-                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                        dateStr = formatter.format(date);
-                        String html = template.replace("<date>", dateStr+app.getSubject()+"题答案").replace("<content>", answer);
+                        String html = template.replace("<content>", answer);
                         webView.loadDataWithBaseURL("http://"+domain+".cooco.net.cn/", html, "text/html; charset=UTF-8", "UTF-8", null);
                     }
                 });
@@ -135,8 +132,10 @@ public class AnswerActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.shared) {
-            if(testid<0)
+            if(testid<0) {
+                Snackbar.make(webView, "分享试题后才能分享答案", Snackbar.LENGTH_LONG).show();
                 return true;
+            }
 
             // WebView 生成长图，也就是超过一屏的图片，代码中的 longImage 就是最后生成的长图
             webView.measure(View.MeasureSpec.makeMeasureSpec(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
@@ -195,9 +194,22 @@ public class AnswerActivity extends AppCompatActivity {
                 post_file(svaeFile, "hx");
             }
 
-        }
-    }
 
+            Uri imageUri = Uri.fromFile(svaeFile);
+            if (imageUri != null) {
+                sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, imageUri));
+                Intent shareIntent = new Intent();
+                shareIntent.setAction(Intent.ACTION_SEND);
+                shareIntent.setType("image/*");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(Intent.createChooser(shareIntent, title));
+            } else {
+                Snackbar.make(webView, "分享出错", Snackbar.LENGTH_LONG).setAction("Action",null).show();
+            }
+        }
+
+    }
 
 
     Bitmap cleanBoard(Bitmap bmp2){

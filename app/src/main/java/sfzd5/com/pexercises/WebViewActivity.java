@@ -51,6 +51,7 @@ public class WebViewActivity extends AppCompatActivity {
     String dateStr;
     DBHelper dbHelper;
     PEApplication app;
+    int testid = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -168,7 +169,7 @@ public class WebViewActivity extends AppCompatActivity {
             Intent intent = new Intent(WebViewActivity.this, AnswerActivity.class);
             intent.putExtra("dbid", testQuestion.id);
             intent.putExtra("dbname", app.dbFile2Name.get(dbHelper.getDBFileName()));
-            intent.putExtra("testid", -1);
+            intent.putExtra("testid", testid);
             startActivity(intent);
         }
 
@@ -266,7 +267,7 @@ public class WebViewActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        Request request = new Request.Builder()
+        final Request request = new Request.Builder()
                 .url("http://www.circuits.top/mryt"+dir+"/up.php?d=" + date + "&knowledge=" + knowledge + "&dbid=" + String.valueOf(testQuestion.id) + "&dbname=" + app.dbFile2Name.get(dbHelper.getDBFileName()))
                 .post(requestBody)
                 .build();
@@ -280,7 +281,10 @@ public class WebViewActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-
+                String s = response.body().string();
+                try{
+                    testid = Integer.parseInt(s);
+                } catch (Exception e){}
             }
         });
     }
