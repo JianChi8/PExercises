@@ -244,17 +244,12 @@ public class AnswerActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-
+                Snackbar.make(webView, "上传失败", Snackbar.LENGTH_LONG).setAction("Action",null).show();
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(AnswerActivity.this, "发布完成", Toast.LENGTH_LONG);
-                    }
-                });
+                Snackbar.make(webView, "上传完成", Snackbar.LENGTH_LONG).setAction("Action",null).show();
             }
         });
     }
