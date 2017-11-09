@@ -113,6 +113,7 @@ public class StartActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String subject = items[which];
+                app.checkDbFile();
                 app.setSubject(subject);
                 runOnUiThread(new Runnable() {
                     @Override

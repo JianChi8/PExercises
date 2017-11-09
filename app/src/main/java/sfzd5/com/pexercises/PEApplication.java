@@ -65,12 +65,13 @@ public class PEApplication extends Application {
         return true;
     }
 
-    private void checkDbFile(){
+    public void checkDbFile(){
         File dbDir = DirectoryUtils.findDirAtExternalSdCardPath(dbDirPath);
         if(dbDir==null){
             dbInitSuccess=false;
             return;
         } else {
+            subjectDBs.clear();
             File[] fs = dbDir.listFiles();
             if(fs!=null) {
                 for (File f : fs) {

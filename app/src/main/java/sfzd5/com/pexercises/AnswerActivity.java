@@ -11,20 +11,28 @@ import android.os.Environment;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -51,6 +59,9 @@ public class AnswerActivity extends AppCompatActivity {
     String domain;
     String answer="";
     int testid = 0;
+    ShareHelper shareHelper;
+    OkHttpClient mOkHttpClient;
+    File dbFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,10 +86,9 @@ public class AnswerActivity extends AppCompatActivity {
         testid = intent.getIntExtra("testid", 1);
         String dbname = intent.getStringExtra("dbname");
 
-
         File dbDir = app.getSubjectDbDir();
         String dbFileName = app.name2DbFile.get(dbname);
-        File dbFile = new File(dbDir, dbFileName);
+        dbFile = new File(dbDir, dbFileName);
 
         DBHelper dbHelper = new DBHelper(dbFile);
         //查询 数据库，生成html
@@ -89,35 +99,29 @@ public class AnswerActivity extends AppCompatActivity {
 
         webView = (WebView) findViewById(R.id.webView);
 
-        String url = "http://" + domain + ".cooco.net.cn/answerdetail/" + testQuestion.answer_id + "/";
-        OkHttpClient mOkHttpClient = new OkHttpClient();
-        final Request request = new Request.Builder().url(url).build();
-        mOkHttpClient.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                Snackbar.make(webView, "获取答案失败", Snackbar.LENGTH_LONG).show();
-            }
+        if(testQuestion.answer.isEmpty()){
+            down_answer_img();
+        } else {
+            showHtml();
+        }
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                try {
-                    answer = response.body().string();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Date date = new Date();
-                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-                        dateStr = formatter.format(date);
-                        String html = template.replace("<date>", dateStr+app.getSubject()+"题答案").replace("<content>", answer);
-                        webView.loadDataWithBaseURL("http://"+domain+".cooco.net.cn/", html, "text/html; charset=UTF-8", "UTF-8", null);
-                    }
-                });
-            }
-        });
+        String dir = "";
+        if (app.getSubject().equals("物理")) {
+            dir ="";
+        } else if (app.getSubject().equals("数学")) {
+            dir ="sx";
+        } else if (app.getSubject().equals("化学")) {
+            dir ="hx";
+        }
+
+        shareHelper = new ShareHelper(webView, this, app, "http://www.circuits.top/mryt"+dir+"/up.php?testid=" + String.valueOf(testid));
     }
+
+    void showHtml(){
+        String html = template.replace("<content>", img2Base64(testQuestion));
+        webView.loadData(html, "text/html; charset=UTF-8", null);
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -135,27 +139,19 @@ public class AnswerActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.shared) {
-            if(testid<0)
+            if(testid<0) {
+                Snackbar.make(webView, "分享试题后才能分享答案", Snackbar.LENGTH_LONG).show();
                 return true;
-
-            // WebView 生成长图，也就是超过一屏的图片，代码中的 longImage 就是最后生成的长图
-            webView.measure(View.MeasureSpec.makeMeasureSpec(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            webView.layout(0, 0, webView.getMeasuredWidth(), webView.getMeasuredHeight());
-            webView.setDrawingCacheEnabled(true);
-            webView.buildDrawingCache();
-            Bitmap longImage = Bitmap.createBitmap(webView.getMeasuredWidth(), webView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(longImage);  // 画布的宽高和 WebView 的网页保持一致
-            Paint paint = new Paint();
-            canvas.drawBitmap(longImage, 0, webView.getMeasuredHeight(), paint);
-            webView.draw(canvas);
-
-            //分享
-            shareSingleImage(longImage, app.getSubject()+"每日一题");
+            }
+            shareHelper.sharedWebViewImage();
 
             Intent intent = new Intent();
             intent.putExtra("id", testQuestion.id);
             setResult(RESULT_OK, intent); //intent为A传来的带有Bundle的intent，当然也可以自己定义新的Bundle
             //finish();
+            return true;
+        } else if(id == R.id.screen){
+            shareHelper.shareScreen();
             return true;
         }
 
@@ -163,94 +159,166 @@ public class AnswerActivity extends AppCompatActivity {
     }
 
 
-    //分享单张图片
-    public void shareSingleImage(Bitmap bmp2, String title) {
-        File shareDir = StaticTools.getDiskShareDir(this);
-        if (!shareDir.exists()) {
-            shareDir.mkdir();
-        }
-
-        bmp2 = cleanBoard(bmp2);
-
-        String fileName = String.valueOf((new Date()).getTime()) + ".png";
-        File svaeFile = new File(shareDir, fileName);
-
-        try {
-            FileOutputStream out = new FileOutputStream(svaeFile);
-            bmp2.compress(Bitmap.CompressFormat.PNG, 80, out);
-            out.flush();
-            out.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if(svaeFile.exists()){
-            if(app.getSubject().equals("物理")) {
-                post_file(svaeFile, "");
-            } else if(app.getSubject().equals("数学")) {
-                post_file(svaeFile, "sx");
-            } else if(app.getSubject().equals("化学")) {
-                post_file(svaeFile, "hx");
-            }
-
-        }
-    }
-
-
-
-    Bitmap cleanBoard(Bitmap bmp2){
-        int h;
-        int[] pixs = new int[bmp2.getWidth()];
-        for(h = bmp2.getHeight()-1; h>0; h--){
-            bmp2.getPixels(pixs, 0, pixs.length, 0, h, pixs.length, 1);
-            if(hasBlack(pixs)){
-                break;
-            }
-        }
-
-        Bitmap bmp = Bitmap.createBitmap(bmp2, 0, 0, bmp2.getWidth(), h+5, null,false);
-        return bmp;
-
-    }
-
-    boolean hasBlack(int[] pixs){
-        for(int x = 0; x<pixs.length; x++){
-            int p = pixs[x];
-            p = p & 0x00FFFFFF;
-            if(p!=0x00FFFFFF){
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-
-    protected void post_file(File file, String dir) {
-        RequestBody fileBody = RequestBody.create(MediaType.parse("image/png"), file);
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", "head_image", fileBody)
-                .build();
-
-        Request request = new Request.Builder()
-                .url("http://www.circuits.top/mryt"+dir+"/up.php?testid=" + String.valueOf(testid))
-                .post(requestBody)
-                .build();
-
-        OkHttpClient client = new OkHttpClient();
-        client.newCall(request).enqueue(new Callback() {
+    /*
+    下载图片
+    **/
+    void down_answer_img(){
+        new Thread(new Runnable() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                Snackbar.make(webView, "上传失败", Snackbar.LENGTH_LONG).setAction("Action",null).show();
-            }
+            public void run() {
+                mOkHttpClient = new OkHttpClient.Builder()
+                        .connectTimeout(10, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .build();
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                Snackbar.make(webView, "上传完成", Snackbar.LENGTH_LONG).setAction("Action",null).show();
+                String aurl = "http://" + domain + ".cooco.net.cn/answerdetail/" + testQuestion.answer_id + "/";
+                Pattern p = Pattern.compile("<img[^>]*>");
+                Pattern psrc = Pattern.compile("src=['\"]([^'\"]*)['\"]");
+
+                Request request = new Request.Builder().url(aurl).build();
+                Call call = mOkHttpClient.newCall(request);
+                try {
+                    Response response = call.execute();
+                    if(response.isSuccessful()) {
+                        String html = response.body().string();
+                        if (html.isEmpty()) {
+                            testQuestion.answer = "答案略";
+                        } else {
+                            DBHelper dbHelper = new DBHelper(dbFile);
+
+                            testQuestion.answer = html;
+                            Matcher m = p.matcher(html);
+                            int j = 0;
+                            while (m.find()) {
+                                String img = m.group();
+                                Matcher src = psrc.matcher(img);
+                                if (src.find()) {
+                                    String url = src.group(1);
+                                    if (url.startsWith("/"))
+                                        url = "http://" + domain + ".cooco.net.cn" + url;//http://czwl.cooco.net.cn/files/down/test/2016/03/25/20/2016032520323732298210.files/image043.gif
+                                    else if (url.startsWith("http")) {
+
+                                    } else {
+                                        continue;
+                                    }
+
+                                    String picname = testQuestion.id + "_" + j + url.substring(url.length() - 4);
+                                    System.out.println(picname);
+
+                                    try {
+                                        Request prequest = new Request.Builder().url(url).build();
+                                        Call pcall = mOkHttpClient.newCall(prequest);
+                                        Response presponse = pcall.execute();
+                                        if(presponse.isSuccessful()){
+                                            InputStream is = null;
+                                            byte[] buf = new byte[2048];
+                                            int len = 0;
+                                            ByteArrayOutputStream bos=new ByteArrayOutputStream();
+                                            try {
+                                                is = presponse.body().byteStream();
+                                                while ((len = is.read(buf)) != -1) {
+                                                    bos.write(buf, 0, len);
+                                                }
+                                                bos.flush();
+                                                dbHelper.insertAnswerPic(picname, bos.toByteArray());
+
+                                            } catch (Exception e) {
+                                            } finally {
+                                                try {
+                                                    if (is != null)
+                                                        is.close();
+                                                } catch (IOException e) {
+                                                }
+                                                try {
+                                                    if (bos != null)
+                                                        bos.close();
+                                                } catch (IOException e) {
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception e) {
+
+                                    }
+
+                                    j++;
+                                }
+                            }
+
+                            dbHelper.updateAnswer(testQuestion);
+                            dbHelper.close();
+
+                        }
+                        //显示答案
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                showHtml();
+                            }
+                        });
+
+                    } else {
+                        //返回获取错误
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Snackbar.make(webView, "获取答案失败", Snackbar.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        });
+        }).start();
+    }
+
+
+    public String img2Base64(TestQuestion testQuestion) {
+        Pattern p = Pattern.compile("<img[^>]*>");
+        Pattern psrc = Pattern.compile("src=['\"]([^'\"]*)['\"]");
+
+        StringBuilder stringBuilder = new StringBuilder();
+        int pstart = 0;
+
+        DBHelper dbHelper =new DBHelper(dbFile);
+
+        Matcher m = p.matcher(testQuestion.question);
+        int j = 0;
+        while (m.find()) {
+            stringBuilder.append(testQuestion.question.substring(pstart, m.start()));
+            pstart = m.end();
+
+            String img = m.group();
+            Matcher src = psrc.matcher(img);
+            if (src.find()) {
+                String url = src.group(1);
+                String fileName = testQuestion.id + "_" + j + url.substring(url.length() - 4);
+                byte[] bytes = dbHelper.takeAnswerPic(fileName);
+                if (bytes!=null) {
+                    stringBuilder.append(img.substring(0, src.start(1)));
+                    stringBuilder.append(imageToBase64Head(fileName, bytes));
+                    stringBuilder.append(img.substring(src.end(1)));
+                } else {
+                    stringBuilder.append(img);
+                }
+
+                j++;
+            } else {
+                stringBuilder.append(img);
+            }
+        }
+        stringBuilder.append(testQuestion.question.substring(pstart));
+
+        return stringBuilder.toString();
+    }
+
+
+    public static String imageToBase64Head(String imgFile, byte[] bytes){
+        //将图片文件转化为字节数组字符串，并对其进行Base64编码处理
+        String type = imgFile.substring(imgFile.length()-3,imgFile.length());
+        //为编码添加头文件字符串
+        String head = "data:image/"+type+";base64,";
+        return head + Base64.encodeToString(bytes, Base64.DEFAULT);
     }
 }

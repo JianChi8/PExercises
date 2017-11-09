@@ -51,6 +51,9 @@ public class WebViewActivity extends AppCompatActivity {
     String dateStr;
     DBHelper dbHelper;
     PEApplication app;
+    int testid = -1;
+
+    ShareHelper shareHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +80,17 @@ public class WebViewActivity extends AppCompatActivity {
         webView.loadData(html, "text/html; charset=UTF-8", null);
         //webView.loadData(html, "html", "utf-8");
 
+        String dir = "";
+        if (app.getSubject().equals("物理")) {
+            dir ="";
+        } else if (app.getSubject().equals("数学")) {
+            dir ="sx";
+        } else if (app.getSubject().equals("化学")) {
+            dir ="hx";
+        }
+        String postUrl = "http://www.circuits.top/mryt"+dir+"/up.php?d=" + date + "&knowledge=" + testQuestion.knowledge + "&dbid=" + String.valueOf(testQuestion.id) + "&dbname=" + app.dbFile2Name.get(dbHelper.getDBFileName());
+
+        shareHelper = new ShareHelper(webView, this, app, postUrl);
     }
 
     public String img2Base64(TestQuestion testQuestion) {
@@ -140,20 +154,7 @@ public class WebViewActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.shared) {
-                        // WebView 生成长图，也就是超过一屏的图片，代码中的 longImage 就是最后生成的长图
-            webView.measure(View.MeasureSpec.makeMeasureSpec(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            webView.layout(0, 0, webView.getMeasuredWidth(), webView.getMeasuredHeight());
-
-            webView.setDrawingCacheEnabled(true);
-            webView.buildDrawingCache();
-            Bitmap longImage = Bitmap.createBitmap(webView.getMeasuredWidth(), webView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(longImage);  // 画布的宽高和 WebView 的网页保持一致
-            Paint paint = new Paint();
-            canvas.drawBitmap(longImage, 0, webView.getMeasuredHeight(), paint);
-            webView.draw(canvas);
-
-            //分享
-            shareSingleImage(longImage, app.getSubject()+"每日一题");
+            shareHelper.sharedWebViewImage();
 
             Intent intent = new Intent();
             intent.putExtra("id", testQuestion.id);
@@ -168,120 +169,15 @@ public class WebViewActivity extends AppCompatActivity {
             Intent intent = new Intent(WebViewActivity.this, AnswerActivity.class);
             intent.putExtra("dbid", testQuestion.id);
             intent.putExtra("dbname", app.dbFile2Name.get(dbHelper.getDBFileName()));
-            intent.putExtra("testid", -1);
+            intent.putExtra("testid", testid);
             startActivity(intent);
+        } else if(id == R.id.screen){
+            shareHelper.shareScreen();
+            return true;
         }
+
 
         return super.onOptionsItemSelected(item);
     }
 
-    //分享单张图片
-    public void shareSingleImage(Bitmap bmp2, String title) {
-        File shareDir = StaticTools.getDiskShareDir(this);
-        if (!shareDir.exists()) {
-            shareDir.mkdir();
-        }
-
-        bmp2 = cleanBoard(bmp2);
-
-        String fileName = String.valueOf((new Date()).getTime()) + ".png";
-        File svaeFile = new File(shareDir, fileName);
-
-        try {
-            FileOutputStream out = new FileOutputStream(svaeFile);
-            bmp2.compress(Bitmap.CompressFormat.PNG, 80, out);
-            out.flush();
-            out.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if(svaeFile.exists()){
-            if(app.getSubject().equals("物理")) {
-                post_file(dateStr, testQuestion.knowledge, svaeFile, "");
-            } else if(app.getSubject().equals("数学")) {
-                post_file(dateStr, testQuestion.knowledge, svaeFile, "sx");
-            } else if(app.getSubject().equals("化学")) {
-                post_file(dateStr, testQuestion.knowledge, svaeFile, "hx");
-            }
-
-            Uri imageUri = Uri.fromFile(svaeFile);
-            if (imageUri != null) {
-                sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, imageUri));
-                Intent shareIntent = new Intent();
-                shareIntent.setAction(Intent.ACTION_SEND);
-                shareIntent.setType("image/*");
-                shareIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
-                shareIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(Intent.createChooser(shareIntent, title));
-            } else {
-                Toast.makeText(getApplicationContext(), "分享出错", Toast.LENGTH_LONG).show();
-            }
-        }
-
-    }
-
-
-
-    Bitmap cleanBoard(Bitmap bmp2){
-        int h;
-        int[] pixs = new int[bmp2.getWidth()];
-        for(h = bmp2.getHeight()-1; h>0; h--){
-            bmp2.getPixels(pixs, 0, pixs.length, 0, h, pixs.length, 1);
-            if(hasBlack(pixs)){
-                break;
-            }
-        }
-
-        Bitmap bmp = Bitmap.createBitmap(bmp2, 0, 0, bmp2.getWidth(), h+5, null,false);
-        return bmp;
-
-    }
-
-    boolean hasBlack(int[] pixs){
-        for(int x = 0; x<pixs.length; x++){
-            int p = pixs[x];
-            p = p & 0x00FFFFFF;
-            if(p!=0x00FFFFFF){
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-
-    protected void post_file(String date, String knowledge, File file, String dir) {
-        RequestBody fileBody = RequestBody.create(MediaType.parse("image/png"), file);
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", "head_image", fileBody)
-                .build();
-
-        try {
-            knowledge = URLEncoder.encode(knowledge, "utf-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-        Request request = new Request.Builder()
-                .url("http://www.circuits.top/mryt"+dir+"/up.php?d=" + date + "&knowledge=" + knowledge + "&dbid=" + String.valueOf(testQuestion.id) + "&dbname=" + app.dbFile2Name.get(dbHelper.getDBFileName()))
-                .post(requestBody)
-                .build();
-
-        OkHttpClient client = new OkHttpClient();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-
-            }
-        });
-    }
 }
