@@ -283,10 +283,10 @@ public class AnswerActivity extends AppCompatActivity {
 
         DBHelper dbHelper =new DBHelper(dbFile);
 
-        Matcher m = p.matcher(testQuestion.question);
+        Matcher m = p.matcher(testQuestion.answer);
         int j = 0;
         while (m.find()) {
-            stringBuilder.append(testQuestion.question.substring(pstart, m.start()));
+            stringBuilder.append(testQuestion.answer.substring(pstart, m.start()));
             pstart = m.end();
 
             String img = m.group();
@@ -308,7 +308,7 @@ public class AnswerActivity extends AppCompatActivity {
                 stringBuilder.append(img);
             }
         }
-        stringBuilder.append(testQuestion.question.substring(pstart));
+        stringBuilder.append(testQuestion.answer.substring(pstart));
 
         return stringBuilder.toString();
     }
