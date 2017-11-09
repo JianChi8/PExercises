@@ -88,7 +88,7 @@ public class WebViewActivity extends AppCompatActivity {
         } else if (app.getSubject().equals("化学")) {
             dir ="hx";
         }
-        String postUrl = "http://www.circuits.top/mryt"+dir+"/up.php?d=" + date + "&knowledge=" + testQuestion.knowledge + "&dbid=" + String.valueOf(testQuestion.id) + "&dbname=" + app.dbFile2Name.get(dbHelper.getDBFileName());
+        String postUrl = "http://www.circuits.top/mryt"+dir+"/up.php?d=" + dateStr + "&knowledge=" + testQuestion.knowledge + "&dbid=" + String.valueOf(testQuestion.id) + "&dbname=" + app.dbFile2Name.get(dbHelper.getDBFileName());
 
         shareHelper = new ShareHelper(webView, this, app, postUrl);
     }
