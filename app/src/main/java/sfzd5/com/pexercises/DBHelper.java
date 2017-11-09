@@ -5,7 +5,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import java.io.File;
-import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -329,5 +328,33 @@ public class DBHelper {
             conn.close();
             conn = null;
         }
+    }
+
+    public void insertAnswerPic(String picname, byte[] bytes) {
+        ContentValues cv = new ContentValues();
+        cv.put("picname", picname);
+        cv.put("data", bytes);
+        conn.insert("answer_pic", "", cv);
+    }
+
+    public void updateAnswer(TestQuestion testQuestion) {
+        ContentValues cv = new ContentValues();
+        cv.put("answer", testQuestion.answer);
+        conn.update("test", cv, "id=?", new String[]{String.valueOf(testQuestion.id)});
+    }
+
+    public byte[] takeAnswerPic(String picname) {
+        byte[] bytes = null;
+        String sql = "select picname,data from answer_pic where picname='"+picname+"'";
+        try {
+            Cursor cursor = conn.rawQuery(sql, null);
+            if (cursor.moveToNext()) {
+                bytes=cursor.getBlob(1);
+            }
+            cursor.close();
+        } catch (android.database.SQLException e) {
+            e.printStackTrace();
+        }
+        return bytes;
     }
 }

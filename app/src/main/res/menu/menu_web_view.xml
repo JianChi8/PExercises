@@ -12,4 +12,9 @@
         android:orderInCategory="102"
         android:title="@string/answer"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/screen"
+        android:orderInCategory="103"
+        android:title="@string/screen"
+        app:showAsAction="always" />
 </menu>

@@ -14,4 +14,5 @@
     <string name="title_activity_voice_rec">讲解录音</string>
     <string name="answer">答案</string>
     <string name="title_activity_answer">答案</string>
+    <string name="screen">传屏</string>
 </resources>
