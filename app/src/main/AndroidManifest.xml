@@ -58,7 +58,9 @@
         <activity
             android:name=".AnswerActivity"
             android:label="@string/title_activity_answer"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".EditHtmlActivity" />
+        <activity android:name=".SendTestQuestionActivity"></activity>
     </application>
 
 </manifest>
